@@ -75,6 +75,7 @@ def get_flux(**kwargs):
       if max_level is None:
         max_level = f['adaptive_num_levels'][0]
       else:
+        #it does this in case you don't want to image all the levels. but idc i'm always going to image all the levels
         max_level = min(max_level, f['adaptive_num_levels'][0])
       if max_level > 0:
         num_blocks = {}
