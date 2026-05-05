@@ -12,7 +12,7 @@ import argparse
 from os import system
 
 # Athena++ modules
-import athena_mc as athenamc
+from . import athena_mc as athenamc
 
 def list_match(list1, list2):
     """
