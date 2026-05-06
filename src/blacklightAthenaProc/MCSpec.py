@@ -21,11 +21,13 @@ class MCSpec:
             fileNameFormat = listFiles[0].split('/')[-1].split('.')
             outIndex = fileNameFormat.index('out1')
             listName = '.'.join(fileNameFormat[:outIndex+1])
-        
+
         if outPath is None:
             outfile = os.path.join(directory,listName+".list")
             specFile = os.path.join(directory,listName+".spec")
         else:
+            if not os.isdir(outPath):
+                os.makedirs(outPath)
             outfile = os.path.join(outPath,listName+".list")
             specFile = os.path.join(outPath,listName+".spec")
         if not os.path.isfile(outfile):
