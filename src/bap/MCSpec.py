@@ -26,7 +26,7 @@ class MCSpec:
             outfile = os.path.join(directory,listName+".list")
             specFile = os.path.join(directory,listName+".spec")
         else:
-            if not os.isdir(outPath):
+            if not os.path.isdir(outPath):
                 os.makedirs(outPath)
             outfile = os.path.join(outPath,listName+".list")
             specFile = os.path.join(outPath,listName+".spec")
@@ -44,6 +44,9 @@ class MCSpec:
 
         #now go from spec file to txt file
         txtArgs = {'infile':specFile,'imu':'sum','iphi':'ave','xscale':'log','xmin':emin,'xmax':emax,'yscale':'log','ymin':None,'ymax':None,'xunit':'kev','yunit':'nulnu','ploterr':True,'outfile':None,'bbtemp':None,'bbnorm':None}
-        spec2txt.main(**txtArgs)
+        self.freq,self.lum,self.lum_err = spec2txt.main(**txtArgs)
+        self.freq = np.array(self.freq).reshape((nfreq,))
+        self.lum = np.array(self.lum).reshape((nfreq,))
+        self.lum_err = np.array(self.lum_err).reshape((nfreq,))
 
-temp = MCSpec('/home/tegan/Research/blacklightAthenaProcessing/example_data/',32,50,1,1000,outPath='/home/tegan/Research/blacklightAthenaProcessing/example_output/')
+#temp = MCSpec('/home/tegan/Research/blacklightAthenaProcessing/example_data/',32,50,1,1000,outPath='/home/tegan/Research/blacklightAthenaProcessing/example_output/')

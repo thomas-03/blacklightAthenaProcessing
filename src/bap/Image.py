@@ -2,6 +2,7 @@ import numpy as np
 import astropy.constants as cons
 
 class Image:
+    
     '''Class for loading and manipulating images from .npz files.'''
     h_ev = 4.135667662e-15
     eV_2_erg = 1.60218e-12 #check this!!
@@ -9,6 +10,7 @@ class Image:
     kB=cons.k_B.cgs.value
     c = 2.99792458e10
     gg_msun = 1.32712440018e26
+
 
     def __init__(self,filename):
         '''Initialize the Image object by loading the .npz file and reading metadata.'''
@@ -24,6 +26,7 @@ class Image:
         self.frequencies = self.file['frequency'][:]
         self.mass_msun = self.file['mass_msun'][0]
         self.width_rg = self.file['width'][0]
+        self.distance = self.file['distance'][0]
         try:
             self.file['Q_nu']
             self.polarization = True
@@ -32,21 +35,18 @@ class Image:
         
 
         self.adaptive_num_levels = self.file['adaptive_num_levels'][0]
-
-        if self.adaptive_num_blocks > 0:
+        
+        if self.adaptive_num_levels > 0:
             self.adaptive_num_blocks = {}
             self.block_locs = {}
             self.adaptive_num_blocks[0] = self.file['adaptive_num_blocks'][0]
             
-            for level in range(1, self.adaptive_num_blocks + 1):
+            for level in range(1, self.adaptive_num_levels + 1):
                 self.adaptive_num_blocks[level] = self.file['adaptive_num_blocks'][level]
                 self.block_locs[level] = self.file['adaptive_block_locs_{0}'.format(level)][:]
+        self.image = None
         
-    def __init__(self, filename, distance):
-        '''Initialize the Image object by loading the .npz file and explicitly setting the distance to the source.'''
-        self.__init__(filename)
-        self.distance = distance
-    
+        
     def load_image(self):
         '''Load the stokes parameters from the .npz file and store them in a dictionary.'''
         if self.image is not None:
@@ -84,12 +84,15 @@ class Image:
                 u_nu = np.zeros(i_nu.shape)*np.nan
                 v_nu = np.zeros(i_nu.shape)*np.nan
                 self.image[0] = np.vstack((i_nu[None,:,:], q_nu[None,:,:], u_nu[None,:,:], v_nu[None,:,:]))
+                #print("in this loop",self.image[0])
+        
+                
 
     
     def get_I(self, level=0):
         '''Get the intensity image for a given level. If the image has not been loaded yet, it will be loaded first.'''
-        image = self.load_image()
-        return image[level][0,:,:,:]
+        self.load_image()
+        return self.image[level][0,:,:,:]
 
     def get_Q(self, level=0):
         '''Get the Q Stokes parameter for a given level. If the image has not been loaded yet, it will be loaded first.'''
@@ -130,7 +133,7 @@ class Image:
         except:
             raise RuntimeError('{0} not found in file.'.format(image_name))
     
-    def get_flux(self,distance=None):
+    def get_flux(self):
         '''Calculate the spatially-averaged flux from the image.
         
         Inputs: 
@@ -138,22 +141,19 @@ class Image:
         Outputs:
         - flux in erg/s/cm^2/Hz
         '''
-        if distance is None:
-            distance = self.distance
-        if distance is None:
-            raise RuntimeError('Must supply distance.')
         if self.adaptive_num_levels>0:
             raise NotImplementedError('Flux calculation not implemented for adaptive images yet.')
         else:
-            image_width =  2*np.arctan(0.5*self.width_rg /(distance))
             image = self.get_I()
+            image_width =  2*np.arctan(0.5*self.width_rg /(self.distance))
             flux = np.array([])
             for freq in range(len(self.frequencies)):
                 tempImage = np.copy(image[freq,:,:])
                 flux = np.append(flux, (np.nanmean(tempImage[np.isfinite(tempImage)])*image_width**2))
+            
         return flux
 
-    def get_luminosity(self, distance=None):
+    def get_luminosity(self):
         '''Calculate the luminosity from the flux and distance.
 
         Inputs: 
@@ -161,13 +161,9 @@ class Image:
         Outputs:
         - luminosity in erg/s/Hz
         '''
-        if distance is None:
-            distance = self.distance
-        if distance is None:
-            raise RuntimeError('Must supply distance.')
-        flux = self.get_flux(distance)
+        flux = self.get_flux()
         rg = self.gg_msun * self.mass_msun / (self.c ** 2)
-        luminosity = 4*np.pi*((rg*distance)**2)*flux
+        luminosity = 2*((rg*self.distance)**2)*flux
         return luminosity
 
 

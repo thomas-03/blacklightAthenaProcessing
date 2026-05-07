@@ -42,7 +42,7 @@ def file_handler(infile):
         flist = [infile]
     return flist
 
-def plot_one(spectrum, ax, xunit, yunit, imu, iphi, plterr, **kwargs):
+def plot_one(spectrum, xunit, yunit, imu, iphi, plterr, **kwargs):
     """
     Plot curves corresponding to single spectrum
     """
@@ -63,7 +63,7 @@ def plot_one(spectrum, ax, xunit, yunit, imu, iphi, plterr, **kwargs):
             for i in range(len(x)):
                 f.write(f'{myDict["freq_kev"][i]} {myDict["spectrum"][i]} {myDict["spectrum_err"][i]}\n')
         #athenamc.make_plot(x, y, yerr=yerr, xlabel=xlabel, ylabel=ylabel, ax=ax, **kwargs)
-
+    return x,y,yerr
 
 
 # Main function
@@ -97,9 +97,9 @@ def main(**kwargs):
     iphi = kwargs.pop("iphi")
 
     # Set axis to be reused
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
-
+    freq = []
+    lum = []
+    lum_err = []
     # plot spectra from all infiles
     for file in files:
         # read spectrum as dict from infile
@@ -107,63 +107,11 @@ def main(**kwargs):
         print("lumin: ("+file+")",athenamc.get_luminosity(spectrum))
 
         # plot curves corresponding to this spectrum
-        plot_one(spectrum, ax, xunit, yunit, imu, iphi, plterr, **kwargs)
+        temp_freq,temp_lum,temp_lum_err = plot_one(spectrum, xunit, yunit, imu, iphi, plterr, **kwargs)
+        print(freq)
+        freq.append(temp_freq)
+        lum.append(temp_lum)
+        lum_err.append(temp_lum_err)
+    return freq,lum,lum_err
 
-    # save plot to outfile
-    plt.savefig(outfile)
-    plt.close()
 
-# Execute main function
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('infile',
-        help = 'input photon spectrum filename(s)')
-    parser.add_argument('--imu',
-        default = 'sum',
-        help = 'index of angle bin to plot')
-    parser.add_argument('--iphi',
-        default = 'ave',
-        help = 'controls phi bin for plot')
-    parser.add_argument('--xscale',
-        default = 'log',
-        help = 'x-axis scale')
-    parser.add_argument('--xmin',
-        default = None,
-        type = float,
-        help = 'x-axis mimimum')
-    parser.add_argument('--xmax',
-        default = None,
-        type = float,
-        help = 'x-axis maximum')
-    parser.add_argument('--yscale',
-        default = 'log',
-        help = 'y-axis scale')
-    parser.add_argument('--ymin',
-        default = None,
-        type = float,
-        help='y-axis mimimum')
-    parser.add_argument('--ymax',
-        default = None,
-        type = float,
-        help = 'y-axis maximum')
-    parser.add_argument('--xunit',
-        default = 'kev',
-        help = 'variable to be used for x axis: ev, kev, nu, lambda')
-    parser.add_argument('--yunit',
-        default = 'nulnu',
-        help = 'variable to be used for y axis: nulnu, lnu, counts')
-    parser.add_argument('-ploterr',
-        action = 'store_true',
-        help = 'plot intensity with error bar')
-    parser.add_argument('--outfile',
-        default = None,
-        help = 'output filename for spectrum')
-    parser.add_argument('--bbtemp',
-        default = None,
-        help = 'blackbody temperature')
-    parser.add_argument('--bbnorm',
-        default = None,
-        help = 'blackbody normalization')
-
-    args = parser.parse_args()
-    main(**vars(args))

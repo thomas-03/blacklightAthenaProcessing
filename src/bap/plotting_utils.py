@@ -2,6 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import astropy.constants as cons
 from scipy.optimize import curve_fit
+eV_2_erg = 1.60218e-12
+h_ev = 4.135667662e-15
+h_erg = 6.626e-27
+kB=cons.k_B.cgs.value
+c = 2.99792458e10
+gg_msun = 1.32712440018e26
 
 def blackbody(frequency,temperature):
     '''Calculate the blackbody spectrum for a given frequency and temperature.'''
@@ -16,7 +22,7 @@ def fit_blackbody(freqs,luminosities):
     return fit_temp
 
 
-def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=None, plot_MC=False, MC_spec=None, MC_labels=None):
+def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=None, MC_spec=None, MC_labels=None,freq_units='eV'):
     '''Plot the spectra from one or multiple Image objects. Optionally also plot a blackbody spectrum and/or Monte Carlo spectra with error bars.
     
     Inputs:
@@ -32,17 +38,24 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
     Output:
     - im: a list of matplotlib line objects for the Image spectra
     '''
-    if not isinstance(image,list):
+    if not isinstance(image, list):
         image = [image]
+    
+    if labels is not None and not isinstance(labels, list):
+        raise TypeError("labels must be a list of strings, not a single string")
+    
+    if labels is not None and len(labels) != len(image):
+        raise ValueError(f"labels must have same length as image list ({len(labels)} != {len(image)})")
 
-    im = []
     for i in range(len(image)):
         frequencies = image[i].frequencies
         L = image[i].get_luminosity()
         if (ax is None) and i==0:
              ax = plt.gca()
-            
-        im.append(ax.plot(frequencies, L*frequencies,label=labels[i] if labels is not None else None))
+        if freq_units == 'eV':
+            ax.plot(frequencies*h_ev, L*frequencies, label=labels[i] if labels is not None else None)
+        else:
+            ax.plot(frequencies, L*frequencies, label=labels[i] if labels is not None else None)
     
     if plot_blackbody:
         if temperature is None:
@@ -51,10 +64,18 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
         bb_flux = blackbody(bb_freq, temperature)
         ax.plot(bb_freq, bb_flux*bb_freq, label='Blackbody (T={0:.2e} K)'.format(temperature))
     
-    if plot_MC:
+    if MC_spec != None:
         if not isinstance(MC_spec, list):
             MC_spec = [MC_spec]
+        #if not isinstance(MC_spec[0],MCSpec):
+        #    raise TypeError('The MC_spec you want to plot must be an MCSpec object')
         for i in range(len(MC_spec)):
-            ax.errorbar(MC_spec[i][0], MC_spec[i][1]*MC_spec[i][0],yerr=MC_spec[i][2]*MC_spec[i][0], label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
+            if freq_units =='eV':
+                ax.errorbar(MC_spec[i].freq*1e3, MC_spec[i].lum*MC_spec[i].freq,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
+            else:
+                ax.errorbar(MC_spec[i].freq*1e3/h_ev, MC_spec[i].lum*MC_spec[i].freq,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
     
-    return im
+    return ax
+
+def plot_image(image,image_name,ax=None,axes='rg'):
+    '''Plot an image'''
