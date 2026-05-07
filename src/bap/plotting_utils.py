@@ -1,19 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import astropy.constants as cons
 from scipy.optimize import curve_fit
 import matplotlib.colors as colors
 from matplotlib.colors import LogNorm
 from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-eV_2_erg = 1.60218e-12
-h_ev = 4.135667662e-15
-h_erg = 6.626e-27
-kB=cons.k_B.cgs.value
-c = 2.99792458e10
-gg_msun = 1.32712440018e26
+from . import Units
 
 def blackbody(frequency,temperature):
     '''Calculate the blackbody spectrum for a given frequency and temperature.'''
@@ -59,7 +52,7 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
         if (ax is None) and i==0:
              ax = plt.gca()
         if freq_units == 'eV':
-            ax.plot(frequencies*h_ev, L*frequencies, label=labels[i] if labels is not None else None)
+            ax.plot(frequencies*Units.h_ev, L*frequencies, label=labels[i] if labels is not None else None)
         else:
             ax.plot(frequencies, L*frequencies, label=labels[i] if labels is not None else None)
     
@@ -69,6 +62,7 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
         bb_freq = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), 100)
         bb_flux = blackbody(bb_freq, temperature)
         ax.plot(bb_freq, bb_flux*bb_freq, label='Blackbody (T={0:.2e} K)'.format(temperature))
+        #TO DO: add the frequency dependent switch here
     
     if MC_spec != None:
         if not isinstance(MC_spec, list):
@@ -79,7 +73,7 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
             if freq_units =='eV':
                 ax.errorbar(MC_spec[i].freq*1e3, MC_spec[i].lum*MC_spec[i].freq,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
             else:
-                ax.errorbar(MC_spec[i].freq*1e3/h_ev, MC_spec[i].lum*MC_spec[i].freq,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
+                ax.errorbar(MC_spec[i].freq*1e3/Units.h_ev, MC_spec[i].lum*MC_spec[i].freq,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
     
     return ax
 
@@ -101,7 +95,7 @@ def plot_image(image,image_name,freq=0,ax=None,axes='rg',logc=False,cmin=None,cm
 
     # Calculate root grid in cm
     elif axes == 'cm':
-        rg = gg_msun * image.mass_msun / c ** 2
+        rg = Units.gg_msun * image.mass_msun / Units.c ** 2
         half_width = 0.5 * image.width_rg * rg
         scale_exponent = int('{0:24.16e}'.format(half_width).split('e')[1])
         if scale_exponent in (0, 1):
@@ -117,9 +111,8 @@ def plot_image(image,image_name,freq=0,ax=None,axes='rg',logc=False,cmin=None,cm
 
     # Calculate root grid in muas
     else:
-        muas = np.pi / 180.0 / 60.0 / 60.0 / 1.0e6
-        rg = gg_msun * image.mass_msun / c ** 2
-        half_width = np.arctan(0.5 * image.width_rg / (self.distance)) / muas
+        rg = Units.gg_msun * image.mass_msun / Units.c ** 2
+        half_width = np.arctan(0.5 * image.width_rg / (self.distance)) / Units.muas
         scale_exponent = int('{0:24.16e}'.format(half_width).split('e')[1])
         if scale_exponent in (0, 1):
             scale = 1.0
@@ -153,6 +146,8 @@ def plot_image(image,image_name,freq=0,ax=None,axes='rg',logc=False,cmin=None,cm
     
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
+
+    #TO DO: add implementation to include proper title
     return colorpic
 
 def colorbar(ax: Axes, im: AxesImage):
