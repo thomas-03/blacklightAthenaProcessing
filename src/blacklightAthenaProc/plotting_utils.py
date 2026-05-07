@@ -49,7 +49,7 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
             temperature = fit_blackbody(frequencies,L)
         bb_freq = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), 100)
         bb_flux = blackbody(bb_freq, temperature)
-        ax.plot(bb_freq, bb_flux*bb_freq, label='Blackbody (T={0} K)'.format(temperature))
+        ax.plot(bb_freq, bb_flux*bb_freq, label='Blackbody (T={0:.2e} K)'.format(temperature))
     
     if plot_MC:
         if not isinstance(MC_spec, list):
