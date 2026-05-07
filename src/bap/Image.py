@@ -87,7 +87,6 @@ class Image:
                 #print("in this loop",self.image[0])
         
                 
-
     
     def get_I(self, level=0):
         '''Get the intensity image for a given level. If the image has not been loaded yet, it will be loaded first.'''

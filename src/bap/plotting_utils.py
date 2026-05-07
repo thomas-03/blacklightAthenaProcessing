@@ -2,6 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import astropy.constants as cons
 from scipy.optimize import curve_fit
+import matplotlib.colors as colors
+from matplotlib.colors import LogNorm
+from matplotlib.axes import Axes
+from matplotlib.image import AxesImage
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 eV_2_erg = 1.60218e-12
 h_ev = 4.135667662e-15
 h_erg = 6.626e-27
@@ -77,5 +83,85 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
     
     return ax
 
-def plot_image(image,image_name,ax=None,axes='rg'):
+def plot_image(image,image_name,freq=0,ax=None,axes='rg',logc=False,cmin=None,cmax=None,level=0):
     '''Plot an image'''
+    if axes == 'rg' or (axes is None and image.mass_msun is None):
+        half_width = 0.5 * image.width_rg
+        scale_exponent = int('{0:24.16e}'.format(half_width).split('e')[1])
+        if scale_exponent in (0, 1):
+            scale = 1.0
+            x_label = r'$x$ ($GM/c^2$)'
+            y_label = r'$y$ ($GM/c^2$)'
+        else:
+            scale = 10.0 ** scale_exponent
+            x_label = r'$x$ ($10^{' + repr(scale_exponent) + r'}\ GM/c^2$)'
+            y_label = r'$y$ ($10^{' + repr(scale_exponent) + r'}\ GM/c^2$)'
+        half_width /= scale
+        extent = np.array((-half_width, half_width, -half_width, half_width))
+
+    # Calculate root grid in cm
+    elif axes == 'cm':
+        rg = gg_msun * image.mass_msun / c ** 2
+        half_width = 0.5 * image.width_rg * rg
+        scale_exponent = int('{0:24.16e}'.format(half_width).split('e')[1])
+        if scale_exponent in (0, 1):
+            scale = 1.0
+            x_label = r'$x$ ($\mathrm{cm}$)'
+            y_label = r'$y$ ($\mathrm{cm}$)'
+        else:
+            scale = 10.0 ** scale_exponent
+            x_label = r'$x$ ($10^{' + repr(scale_exponent) + r'}\ \mathrm{cm}$)'
+            y_label = r'$y$ ($10^{' + repr(scale_exponent) + r'}\ \mathrm{cm}$)'
+        half_width /= scale
+        extent = np.array((-half_width, half_width, -half_width, half_width))
+
+    # Calculate root grid in muas
+    else:
+        muas = np.pi / 180.0 / 60.0 / 60.0 / 1.0e6
+        rg = gg_msun * image.mass_msun / c ** 2
+        half_width = np.arctan(0.5 * image.width_rg / (self.distance)) / muas
+        scale_exponent = int('{0:24.16e}'.format(half_width).split('e')[1])
+        if scale_exponent in (0, 1):
+            scale = 1.0
+            x_label = r'$x$ ($\mathrm{\mu as}$)'
+            y_label = r'$y$ ($\mathrm{\mu as}$)'
+        else:
+            scale = 10.0 ** scale_exponent
+            x_label = r'$x$ ($10^{' + repr(scale_exponent) + r'}\ \mathrm{\mu as}$)'
+            y_label = r'$y$ ($10^{' + repr(scale_exponent) + r'}\ \mathrm{\mu as}$)'
+        half_width /= scale
+        extent = np.array((-half_width, half_width, -half_width, half_width))
+
+    if image_name=='I':
+        pic = image.get_I(level)
+    elif image_name=='Q':
+        pic = image.get_Q(level)
+    elif image_name=='U':
+        pic = image.get_U(level)
+    elif image_name=='V':
+        pic = image.get_V(level)
+    else:
+        pic = image.get_Alternate_Image(image_name,level)
+    if(pic.ndim==3):
+        pic = pic[freq,:,:]
+    if ax is None:
+        ax = plt.gca()
+    if logc:
+        colorpic = ax.imshow(pic,extent=extent,norm=colors.LogNorm(vmin=cmin,vmax=cmax))
+    else:
+        colorpic = ax.imshow(pic,extent=extent)
+    
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    return colorpic
+
+def colorbar(ax: Axes, im: AxesImage):
+    """
+    Add a color bar aligned to `im` neater than `fig.colorbar(im)`.
+    https://stackoverflow.com/a/39938019/8954109
+    """
+
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+
+    return ax.figure.colorbar(im, cax=cax, orientation="vertical")
