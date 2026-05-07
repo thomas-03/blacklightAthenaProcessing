@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import astropy.constants as cons
 from scipy.optimize import curve_fit
 import matplotlib.colors as colors
 from matplotlib.colors import LogNorm
@@ -112,7 +113,7 @@ def plot_image(image,image_name,freq=0,ax=None,axes='rg',logc=False,cmin=None,cm
     # Calculate root grid in muas
     else:
         rg = Units.gg_msun * image.mass_msun / Units.c ** 2
-        half_width = np.arctan(0.5 * image.width_rg / (self.distance)) / Units.muas
+        half_width = np.arctan(0.5 * image.width_rg / (image.distance)) / Units.muas
         scale_exponent = int('{0:24.16e}'.format(half_width).split('e')[1])
         if scale_exponent in (0, 1):
             scale = 1.0
