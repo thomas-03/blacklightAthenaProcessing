@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import astropy.constants as cons
+from scipy.optimize import curve_fit
 
 def blackbody(frequency,temperature):
     '''Calculate the blackbody spectrum for a given frequency and temperature.'''
@@ -8,6 +9,12 @@ def blackbody(frequency,temperature):
     kB = cons.k_B.cgs.value
     c = cons.c.cgs.value
     return (2*h*frequency**3/c**2) / (np.exp(h*frequency/(kB*temperature)) - 1)
+
+def fit_blackbody(freqs,luminosities):
+    '''Fit a blackbody to the given spectra.'''
+    fit_temp, fit_cov = curve_fit(blackbody,freqs,luminosities)
+    return fit_temp
+
 
 def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=None, plot_MC=False, MC_spec=None, MC_labels=None):
     '''Plot the spectra from one or multiple Image objects. Optionally also plot a blackbody spectrum and/or Monte Carlo spectra with error bars.
@@ -39,7 +46,7 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
     
     if plot_blackbody:
         if temperature is None:
-            raise NotImplementedError('Fitting blackbody temperature not implemented yet. Please specify a temperature to plot the blackbody spectrum.')
+            temperature = fit_blackbody(frequencies,L)
         bb_freq = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), 100)
         bb_flux = blackbody(bb_freq, temperature)
         ax.plot(bb_freq, bb_flux*bb_freq, label='Blackbody (T={0} K)'.format(temperature))
