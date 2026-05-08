@@ -1,2 +1,10 @@
 example_output/*
 example_data/*
+src/bap/__pycache__/*
+src/montecarlo/__pycache__/*
+tests/__pycache__/*
+src/fluxKit.egg-info/
+example_athdf_data/*
+blacklight/*
+build/
+example_kharma_data/
