@@ -1,0 +1,117 @@
+#! /usr/bin/env python
+
+"""
+Plot athena++ spectra as function of frequency, angle, photon energy, etc.
+"""
+
+# python standard modules
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Athena++ modules
+from . import athena_mc as athenamc
+
+
+def imu_handler(imu):
+    """
+    Parse imu to deterimine which angles to plot
+    """
+
+    if imu is None:
+        return [0]
+    if imu == 'sum':
+        return [imu]
+    if len(imu) > 1:
+        # loop over all imu in the array
+        slist = imu.strip(('[]')).split(",")
+        ilist = [int(i) for i in slist]
+    else:
+        ilist = [imu]
+    return ilist
+
+def file_handler(infile):
+    """
+    Parse infile to deterimine file list
+    """
+
+    if len(infile) > 1:
+        # loop over all imu in the array
+        flist = infile.strip(('[]')).split(",")
+    else:
+        flist = [infile]
+    return flist
+
+def plot_one(spectrum, xunit, yunit, imu, iphi, plterr, **kwargs):
+    """
+    Plot curves corresponding to single spectrum
+    """
+
+    #Convert xaxis, if needed
+    if xunit != spectrum['units']:
+        athenamc.convert_xaxis(xunit,spectrum)
+
+    # plot spectrum as function mu
+    ilist = imu_handler(imu)
+    for imuv in ilist:
+        x, y, yerr, xlabel, ylabel = athenamc.plot_frequency(spectrum, imuv, iphi=iphi,
+                                     plterr=plterr, xunit=xunit, yunit=yunit)
+        myDict = {'freq_kev':x, 'spectrum':y, 'spectrum_err':yerr}
+        infile = kwargs.pop('infile')
+        with open(infile[:-5]+'.txt', 'w') as f:
+            f.write('# '+xlabel+' '+ylabel+' '+ylabel+'_err\n')
+            for i in range(len(x)):
+                f.write(f'{myDict["freq_kev"][i]} {myDict["spectrum"][i]} {myDict["spectrum_err"][i]}\n')
+        #athenamc.make_plot(x, y, yerr=yerr, xlabel=xlabel, ylabel=ylabel, ax=ax, **kwargs)
+    return x,y,yerr
+
+
+# Main function
+def main(**kwargs):
+    """
+    Wrapper for running the plot_spectrum() function in athena_mc.py. Plotting parameters
+    are specified at command line using argparse and pass via kwargs.
+    """
+    # Get blackbody parameters
+    bbtemp = kwargs.pop('bbtemp')
+    bbnorm = kwargs.pop('bbnorm')
+    if bbtemp is not None:
+        bbtemp = float(bbtemp)
+        if bbnorm is None:
+            bbnorm = 1.
+        else:
+            bbnorm = float(bbnorm)
+
+    # filenames for io
+    infile = kwargs['infile']
+    files = file_handler(infile)
+    outfile = kwargs.pop('outfile')
+    if outfile is None:
+        outfile = files[0].replace('.spec', '.png')
+
+    # Set plot parameters
+    plterr = kwargs.pop("ploterr")
+    xunit = kwargs.pop("xunit")
+    yunit = kwargs.pop("yunit")
+    imu = kwargs.pop("imu")
+    iphi = kwargs.pop("iphi")
+
+    # Set axis to be reused
+    freq = []
+    lum = []
+    lum_err = []
+    # plot spectra from all infiles
+    for file in files:
+        # read spectrum as dict from infile
+        spectrum = athenamc.read_spectrum(file)
+        print("lumin: ("+file+")",athenamc.get_luminosity(spectrum))
+
+        # plot curves corresponding to this spectrum
+        temp_freq,temp_lum,temp_lum_err = plot_one(spectrum, xunit, yunit, imu, iphi, plterr, **kwargs)
+        print(freq)
+        freq.append(temp_freq)
+        lum.append(temp_lum)
+        lum_err.append(temp_lum_err)
+    return freq,lum,lum_err
+
+

@@ -1,0 +1,2 @@
+./blacklight/bin/blacklight /home/tegan/Research/blacklightAthenaProcessing/blacklight/input/tde_simulation.input --output_file=./example_athdf_data//xiaoshan.tde.out1.01020.npz --simulation_file=./example_athdf_data//xiaoshan.tde.out1.01020.athdf
+./blacklight/bin/blacklight /home/tegan/Research/blacklightAthenaProcessing/blacklight/input/tde_simulation.input --output_file=./example_athdf_data//tdestream.out1.01335.npz --simulation_file=./example_athdf_data//tdestream.out1.01335.athdf
