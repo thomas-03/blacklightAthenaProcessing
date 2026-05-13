@@ -9,8 +9,6 @@ from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from . import Units
-import k3d
-from k3d.colormaps import matplotlib_color_maps
 from . import MCSpec
 from . import run_multiple_jobs
 from . import Image
@@ -93,12 +91,12 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
             MC_spec = [MC_spec]
 
         for i in range(len(MC_spec)):
-            ax.errorbar(MC_spec[i].freq*frequency_unit*1e3/Units.h_ev, MC_spec[i].lum*MC_spec[i].freq*lum_unit,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
+            ax.errorbar(MC_spec[i].freq*frequency_unit*1e3/Units.h_ev, MC_spec[i].lum*lum_unit,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
             
             
     ax.legend()
     ax.set_xlabel('$\\nu$ ['+freq_units+']')
-    ax.set_ylabel('$\\nu L_\\nu$ [erg/s]')
+    ax.set_ylabel('$\\nu L_\\nu$ ['+lum_units+'$/s$]')
     return ax
 
 def plot_manyIncs_spectra(blacklight_path,base_input_file,base_output_name,ninc, ax=None, plot_blackbody=False, temperature=None, MC_spec=None, MC_spec_args={}, MC_labels=None,freq_units='eV',lum_units='erg'):
@@ -260,6 +258,9 @@ def plot_2Dgeodesic_positions(geodesics,i,j,ax=None,stepNum=5):
 
 def plot_3Dgeodesic_positions(geodesics,i,j,coords='cart',stepNum=5):
     '''Plot interactive 3D geodesic paths in native simulation coordinates.'''
+
+    import k3d
+    from k3d.colormaps import matplotlib_color_maps
     geo_x1 = geodesics.data['sample_pos'][i+int(np.sqrt(geodesics.npix))*j,::stepNum,1]
     geo_x2 = geodesics.data['sample_pos'][i+int(np.sqrt(geodesics.npix))*j,::stepNum,2]
     geo_x3 = geodesics.data['sample_pos'][i+int(np.sqrt(geodesics.npix))*j,::stepNum,3]
