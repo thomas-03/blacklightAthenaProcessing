@@ -5,7 +5,7 @@ class Image:
     
     '''Class for loading and manipulating images from .npz files.'''
     h_ev = 4.135667662e-15
-    eV_2_erg = 1.60218e-12 #check this!!
+    eV_2_erg = 1.60218e-12
     h_erg = 6.626e-27
     kB=cons.k_B.cgs.value
     c = 2.99792458e10
@@ -71,14 +71,14 @@ class Image:
                     u_nu = np.zeros(i_nu.shape)*np.nan
                     v_nu = np.zeros(i_nu.shape)*np.nan
                     self.image[level] = np.vstack((i_nu[None,:,:,:], q_nu[None,:,:,:], u_nu[None,:,:,:], v_nu[None,:,:,:]))
-        else:
-            if self.polarization:
+        
+        if self.polarization:
                 i_nu = self.file['I_nu'][:]
                 q_nu = self.file['Q_nu'][:]
                 u_nu = self.file['U_nu'][:]
                 v_nu = self.file['V_nu'][:]
                 self.image[0] = np.vstack((i_nu[None,:,:], q_nu[None,:,:], u_nu[None,:,:], v_nu[None,:,:]))
-            else:
+        else:
                 i_nu = self.file['I_nu'][:]
                 q_nu = np.zeros(i_nu.shape)*np.nan
                 u_nu = np.zeros(i_nu.shape)*np.nan
@@ -91,13 +91,21 @@ class Image:
     def get_I(self, level=0):
         '''Get the intensity image for a given level. If the image has not been loaded yet, it will be loaded first.'''
         self.load_image()
-        return self.image[level][0,:,:,:]
+        I = {}
+        I[0] = self.image[0][0,:,:,:]
+        for level in range(1,level+1):
+            I[level] = self.image[level][0,:,:,:]
+        return I
 
     def get_Q(self, level=0):
         '''Get the Q Stokes parameter for a given level. If the image has not been loaded yet, it will be loaded first.'''
         image = self.load_image()
         if self.polarization:
-            return image[level][1,:,:,:]
+            I = {}
+            I[0] = self.image[0][1,:,:,:]
+            for level in range(1,level+1):
+                I[level] = self.image[level][1,:,:,:]
+            return I
         else:
             raise RuntimeError('No polarization data in file.')
     
@@ -105,7 +113,11 @@ class Image:
         '''Get the U Stokes parameter for a given level. If the image has not been loaded yet, it will be loaded first.'''
         image = self.load_image()
         if self.polarization:
-            return image[level][2,:,:,:]
+            I = {}
+            I[0] = self.image[0][2,:,:,:]
+            for level in range(1,level+1):
+                I[level] = self.image[level][2,:,:,:]
+            return I
         else:
             raise RuntimeError('No polarization data in file.')
     
@@ -113,24 +125,32 @@ class Image:
         '''Get the V Stokes parameter for a given level. If the image has not been loaded yet, it will be loaded first.'''
         image = self.load_image()
         if self.polarization:
-            return image[level][3,:,:,:]
+            I = {}
+            I[0] = self.image[0][3,:,:,:]
+            for level in range(1,level+1):
+                I[level] = self.image[level][3,:,:,:]
+            return I
         else:
             raise RuntimeError('No polarization data in file.')
     
     def get_Alternate_Image(self, image_name, level=0):
-        '''Get an alternate image (e.g. optical depth) for a given level.'''
+        '''Get an alternate image (eg. optical depth)'''
         try:
             alt_image = {}
+            # Always try to load the root image first
+            try:
+                alt_image[0] = self.file[image_name][:]
+            except KeyError:
+                alt_image[0] = self.file[f'{image_name}_0'][:]
+
             if self.adaptive_num_levels > 0:
-                for level in range(1, self.adaptive_num_levels + 1):
-                    key = '{0}_{1}'.format(image_name, level)
-                    alt_image[level] = self.file[key][:]
-            else:
-                key = '{0}_0'.format(image_name)
-                alt_image[0] = self.file[key][:]
-            return alt_image
-        except:
-            raise RuntimeError('{0} not found in file.'.format(image_name))
+                for l_idx in range(1, self.adaptive_num_levels + 1):
+                    key = f'adaptive_{image_name}_{l_idx}'
+                    alt_image[l_idx] = self.file[key][:]
+            
+            return alt_image[level]
+        except Exception as e:
+            raise RuntimeError(f"{image_name} level {level} not found. Error: {e}")
     
     def get_flux(self):
         '''Calculate the spatially-averaged flux from the image.
@@ -140,16 +160,132 @@ class Image:
         Outputs:
         - flux in erg/s/cm^2/Hz
         '''
-        if self.adaptive_num_levels>0:
-            raise NotImplementedError('Flux calculation not implemented for adaptive images yet.')
+        if self.adaptive_num_levels > 0:
+            raise UserWarning('The ability to get adaptive-resolution images flux is still being developed!')
+            # Preserve original state
+            original_image = self.image
+            original_block_locs = self.block_locs
+
+            # Load image without permanently mutating self
+            self.load_image()
+
+            try:
+                # Work on local copies instead of self.*
+                image_levels = [None] * len(self.image)
+                block_locs = [None] * len(self.block_locs)
+
+                # Copy loaded adaptive levels
+                for i in range(1, len(self.image)):
+                    image_levels[i] = self.image[i]
+
+                for i in range(1, len(self.block_locs)):
+                    block_locs[i] = self.block_locs[i]
+                root_image = self.get_I()[0]
+                # Disassemble root image into blocks
+                block_res = image_levels[1].shape[-1]
+                num_blocks_root_linear = root_image.shape[-1] // block_res
+
+                image_levels[0] = np.reshape(
+                    root_image,
+                    (-1,
+                    num_blocks_root_linear,
+                    block_res,
+                    num_blocks_root_linear,
+                    block_res)
+                )
+
+                image_levels[0] = np.swapaxes(image_levels[0], 2, 3)
+
+                image_levels[0] = np.reshape(
+                    image_levels[0],
+                    (-1,
+                    self.adaptive_num_blocks[0],
+                    block_res,
+                    block_res)
+                )
+
+                # Describe disassembled image locations
+                block_locs[0] = np.empty(
+                    (self.adaptive_num_blocks[0], 2),
+                    dtype=int
+                )
+
+                for block in range(self.adaptive_num_blocks[0]):
+                    block_locs[0][block, 1] = block % num_blocks_root_linear
+                    block_locs[0][block, 0] = block // num_blocks_root_linear
+
+                # Prepare flags indicating blocks to be counted
+                flags = {}
+                for l in range(self.adaptive_num_levels + 1):
+                    flags[l] = [True] * self.adaptive_num_blocks[l]
+
+                # Determine which blocks are masked by those at higher levels
+                for l in range(1, self.adaptive_num_levels + 1):
+                    for block_fine in range(self.adaptive_num_blocks[l]):
+                        x_loc_fine = block_locs[l][block_fine, 1]
+                        y_loc_fine = block_locs[l][block_fine, 0]
+
+                        x_loc_coarse = x_loc_fine // 2
+                        y_loc_coarse = y_loc_fine // 2
+
+                        for block_coarse in range(self.adaptive_num_blocks[l - 1]):
+                            x_loc_coarse_test = block_locs[l - 1][block_coarse, 1]
+                            y_loc_coarse_test = block_locs[l - 1][block_coarse, 0]
+
+                            if (
+                                x_loc_coarse == x_loc_coarse_test and
+                                y_loc_coarse == y_loc_coarse_test
+                            ):
+                                flags[l - 1][block_coarse] = False
+
+                # Prepare fluxes
+                if self.polarization:
+                    flux = np.zeros(4)
+                else:
+                    flux = np.zeros(1)
+
+                nan_found = False
+
+                # Calculate flux from non-masked blocks
+                block_width_root = self.width_rg / num_blocks_root_linear
+
+                for l in range(self.adaptive_num_levels + 1):
+                    block_width = block_width_root / (2 ** l)
+
+                    for block in range(self.adaptive_num_blocks[l]):
+                        if flags[l][block]:
+
+                            if np.any(np.isnan(image_levels[l][:, block, :, :])):
+                                nan_found = True
+
+                            flux += (
+                                np.nanmean(
+                                    image_levels[l][:, block, :, :],
+                                    axis=(1, 2)
+                                )
+                                * block_width ** 2
+                            )
+
+                if nan_found:
+                    print('Warning: ignoring NaN')
+                    print('')
+
+            finally:
+                # Restore original object state
+                self.image = original_image
+                self.block_locs = original_block_locs
+
         else:
-            image = self.get_I()
-            image_width =  2*np.arctan(0.5*self.width_rg /(self.distance))
+            image = self.get_I()[0]
+            image_width = 2 * np.arctan(0.5 * self.width_rg / self.distance)
+
             flux = np.array([])
+
             for freq in range(len(self.frequencies)):
-                tempImage = np.copy(image[freq,:,:])
-                flux = np.append(flux, (np.nanmean(tempImage[np.isfinite(tempImage)])*image_width**2))
-            
+                tempImage = np.copy(image[freq, :, :])
+
+                flux = np.append(flux,np.nanmean(tempImage[np.isfinite(tempImage)]) * image_width ** 2)
+
         return flux
 
     def get_luminosity(self):

@@ -1,1 +1,1 @@
-# Package for blacklightAthenaProcessing source code
+# Package for fluxKit source code
