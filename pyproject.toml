@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "blacklight-athena-processing"
+name = "fluxKit"
 version = "0.1.0"
 description = "Post-processing tools for Blacklight images and AthenaMC spectra."
 readme = "README.md"

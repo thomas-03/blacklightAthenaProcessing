@@ -8,3 +8,7 @@ example_athdf_data/*
 blacklight/*
 build/
 example_kharma_data/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo

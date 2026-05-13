@@ -52,17 +52,22 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
         if (ax is None) and i==0:
              ax = plt.gca()
         if freq_units == 'eV':
-            ax.plot(frequencies*Units.h_ev, L*frequencies, label=labels[i] if labels is not None else None)
+            ax.plot(frequencies*Units.h_ev, L*frequencies, label=labels[i] if labels is not None else 'Blacklight Spectrum {0}'.format(i))
         else:
-            ax.plot(frequencies, L*frequencies, label=labels[i] if labels is not None else None)
+            ax.plot(frequencies, L*frequencies, label=labels[i] if labels is not None else 'Blacklight Spectrum {0}'.format(i))
     
     if plot_blackbody:
         if temperature is None:
             temperature = fit_blackbody(frequencies,L)
         bb_freq = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), 100)
         bb_flux = blackbody(bb_freq, temperature)
-        ax.plot(bb_freq, bb_flux*bb_freq, label='Blackbody (T={0:.2e} K)'.format(temperature))
+        
         #TO DO: add the frequency dependent switch here
+        if freq_units == 'eV':
+            ax.plot(bb_freq*Units.h_ev, bb_flux*bb_freq, label='Blackbody (T={0:.2e} K)'.format(temperature))
+        else:
+            ax.plot(bb_freq, bb_flux*bb_freq, label='Blackbody (T={0:.2e} K)'.format(temperature))
+    
     
     if MC_spec != None:
         if not isinstance(MC_spec, list):
@@ -71,10 +76,13 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
         #    raise TypeError('The MC_spec you want to plot must be an MCSpec object')
         for i in range(len(MC_spec)):
             if freq_units =='eV':
-                ax.errorbar(MC_spec[i].freq*1e3, MC_spec[i].lum*MC_spec[i].freq,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
+                ax.errorbar(MC_spec[i].freq*1e3, MC_spec[i].lum,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
             else:
-                ax.errorbar(MC_spec[i].freq*1e3/Units.h_ev, MC_spec[i].lum*MC_spec[i].freq,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
+                ax.errorbar(MC_spec[i].freq*1e3/Units.h_ev, MC_spec[i].lum,yerr=MC_spec[i].lum_err, label=MC_labels[i] if MC_labels is not None else 'MC Spectrum {0}'.format(i))
     
+    ax.legend()
+    ax.set_xlabel('$\\nu$ ['+freq_units+']')
+    ax.set_ylabel('$\\nu L_\\nu$ [erg/s]')
     return ax
 
 def plot_image(image,image_name,freq=0,ax=None,axes='rg',logc=False,cmin=None,cmax=None,level=0):
