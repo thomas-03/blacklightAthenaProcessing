@@ -68,12 +68,9 @@ class MCSpec:
     
 
     def read_inputFile(self,inputFile):
-        nfreq = 50 #default number of frequency bins to use if there are none 
-        nfreq_scat = 50
+        nfreq = 50 #default number of frequency bins to use if there are none \
         emin = None
-        eLowerDiff = 0
         emax = None
-        eUpperDiff = 0
         multRanges = False
 
         with open(inputFile,'r') as file:
@@ -90,7 +87,6 @@ class MCSpec:
                         nfreq = int(line_txt.split('=')[-1])
                 elif line_txt[:7]=='nf_scat':
                     nfreq = int(line_txt.split('=')[-1])
-        print(nfreq,emin,emax)
         return nfreq,emin,emax
 
 

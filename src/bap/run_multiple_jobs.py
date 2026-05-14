@@ -7,7 +7,7 @@ def run_mult_inclinations(blacklight_path,base_input_file,base_output_name,ninc)
     i = np.linspace(0.0,180,ninc)
     outputs = []
     for j in range(ninc):
-        output_name= base_output_name+"_i%03d.npz".format(i[j])
+        output_name= base_output_name+"_i{:05.1f}.npz".format(i[j])
         outputs.append(output_name)
         command = blacklight_path + " " + base_input_file + " --output_file="+output_name+" --camera_th={0}".format(i[j])
         os.system(command)

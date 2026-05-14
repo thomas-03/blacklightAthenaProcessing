@@ -26,7 +26,7 @@ def fit_blackbody(freqs,luminosities):
     return fit_temp[0]
 
 
-def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=None, MC_spec=None, MC_spec_args={}, MC_labels=None,freq_units='eV',lum_units='erg'):
+def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=None,area=None, MC_spec=None, MC_spec_args={}, MC_labels=None,freq_units='eV',lum_units='erg'):
     '''Plot the spectra from one or multiple Image objects. Optionally also plot a blackbody spectrum and/or Monte Carlo spectra with error bars.
     
     Inputs:
@@ -81,11 +81,13 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
             temperature = fit_blackbody(frequencies,L)
         bb_freq = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), 100)
         bb_flux = blackbody(bb_freq, temperature)
-        ax.plot(bb_freq*frequency_unit, bb_flux*bb_freq*lum_unit, label='Blackbody (T={0:.2e} K)'.format(temperature))
+        ax.plot(bb_freq*frequency_unit, bb_flux*bb_freq*lum_unit*area, label='Blackbody (T={0:.2e} K)'.format(temperature))
     
 
     if MC_spec ==None and len(MC_spec_args)==5:
-        MC_spec = MCSpec(**MC_spec_args)
+        MC_spec = MCSpec(MC_spec_args['directory'],MC_spec_args['nproc'],nfreq=MC_spec_args['nfreq'],emin=MC_spec_args['emin'],emax=MC_spec_args['emax'])
+    elif MC_spec ==None and len(MC_spec_args)==2:
+            MC_spec = MCSpec(MC_spec_args['directory'],MC_spec_args['nproc'])
     if MC_spec != None:
         if not isinstance(MC_spec, list):
             MC_spec = [MC_spec]
@@ -101,9 +103,9 @@ def plot_spectra(image, ax=None, labels=None, plot_blackbody=False, temperature=
 
 def plot_manyIncs_spectra(blacklight_path,base_input_file,base_output_name,ninc, ax=None, plot_blackbody=False, temperature=None, MC_spec=None, MC_spec_args={}, MC_labels=None,freq_units='eV',lum_units='erg'):
     outfiles = run_multiple_jobs.run_mult_inclinations(blacklight_path,base_input_file,base_output_name,ninc)
-    labels = ["i= "+str(o[-7:-3]) for o in outfiles]
+    labels = ["i= "+str(o[-9:-3]) for o in outfiles]
     images = [Image(o) for o in outfiles]
-    plot_spectra(images, ax=None, labels=labels, plot_blackbody=False, temperature=None, MC_spec=None, MC_spec_args={}, MC_labels=None,freq_units='eV',lum_units='erg')
+    plot_spectra(images, ax=ax, labels=labels, plot_blackbody=plot_blackbody, temperature=temperature, MC_spec=MC_spec, MC_spec_args=MC_spec_args, MC_labels=MC_labels,freq_units=freq_units,lum_units=lum_units)
 
 def plot_manytimes_spectra(outfiles, outputFig, plot_blackbody=False, temperature=None, MC_spec=None, MC_spec_args={}, MC_labels=None,freq_units='eV',lum_units='erg'):
     labels = ["t= "+str(o[-7:-3]) for o in outfiles]
